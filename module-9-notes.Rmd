@@ -1,0 +1,41 @@
+---
+title: "Notes-module9"
+author: "Amber"
+date: "2024-01-31"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Load in library of data, load tidyverse, and create d and f.
+
+```{r}
+library (tidyverse)
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/Country-Data-2016.csv"
+d <- read_csv(f, col_names = TRUE)
+names(d)
+```
+
+# summarize data. how many variables, how many observations.
+```{r}
+summary(d)
+nrow (d)
+ncol(d)
+names(d)
+```
+
+
+# Median population size and area for each country	
+```{r}
+median(d$area, na.rm=TRUE)
+median(d$population, na.rm=TRUE)
+```
+
+
+# create a new density variable in data frame for density and identify the 10 most dense and least dense.
+```{r}
+d$density <- d$population/d$area
+order (d$density, decreasing = TRUE)
+d[1:10]
+```
+#unfortunately, you couldn't get this code to work, but I have to go teach and we're working on diplyr stuff we haven't covered instead of this. 
