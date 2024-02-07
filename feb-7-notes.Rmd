@@ -1,0 +1,88 @@
+---
+title: "Feb-07-Notes"
+output: html_document
+date: "2024-02-07"
+---
+## Conditionals and Flow control
+
+Loading in preliminary data
+
+```
+f <- "https://raw.githubusercontent.com/difiore/ada-2022-datasets/main/IMDB-movies.csv"
+d <- read_csv(f, col_names = TRUE)
+```
+
+# Conditionals
+
+Several options:
+  - if_else(test, do this if true, do this if false) #diplyr
+  - case_when (
+      case1 ~ result1,
+      case2 ~ result2,
+      case3 ~ results3
+      TRUE ~ all others
+    )
+  - Also, but less often used:
+    - if (test) {do this} else {do that}
+    - ifelse (test, do this if true, do this if false) #not diplyr
+    
+# Coding Challenge
+  d, then pipe to d, mutate (name of new column = if_else(function, what if true, what if false))
+```
+d <- d |>
+  mutate(comedy = if_else(str_detect(genres,"Comedy"), TRUE,FALSE))
+```
+
+options for checking how many movies vs how many comedies
+```
+summary (d) #quick and easy, but gives a lot of irrelevant details
+s <- d |> filter (comedy == TRUE), nrow(s) #but doesn't tell you total
+s <- d |>
+  summarise (count=n(), num_comedy = sum(comedy, na.rm=TRUE))
+s #tells you both numbers and only though numbers!
+```
+
+Add another variable for ranking where ranking= low if ranking is 0-3.3, medium if 3.3-6.7, and high if 6.7-10 (averageRating)
+
+```
+d <- d |>
+  mutate(ranking = case_when (
+  averageRating <= 3.3 ~ "Low",
+  averageRating <= 6.7 ~ "Medium",
+  averageRating > 6.7 ~ "High"))
+```
+
+Finding the average runtime for each ranking category. 
+
+```
+s <- d |>
+  group_by(ranking) |>
+  summarise(count=n(), avg_time= mean(runtimeMinutes,      na.rm=TRUE))
+```
+
+## Loops
+
+Can take a lot of computer power and in most cases is NOT worth doing. But to do a loop, you can use several structures. This is a standard for loop:
+
+  for (i in 1:....) {do this}
+  i just means index. Can use any variable or file name. What is in the () defines the limits of the loop. What is in the {} defines what shall be done during each iteration of the loop. 
+  
+#example: 
+
+``` 
+for (i in 1:nrow(d)) {
+    print (i)
+}
+```
+
+Now apply it! Write code to loop through all rows of the dataset and print out the cumulative running time of the movies. 
+``` 
+for (i in 1:nrow(d)){
+    t <- ifelse(is.na(d[i,c("runtimeMinutes")]), t, t + d[i,c("runtimeMinutes")])
+    print(t)
+}
+```
+or, to skip a loop cause it's not useful in this situation:
+```
+cumsum(replace_na(d$runtimeMinutes, 0))
+```
