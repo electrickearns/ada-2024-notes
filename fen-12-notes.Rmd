@@ -1,0 +1,89 @@
+---
+title: "Feb 12 Notes"
+output: html_document
+date: "2024-02-12"
+---
+
+## Creating a Function
+
+Function pseudo code...
+  my_function <- function(<argument list>) {
+      <function code>
+      return (<value>)
+}
+
+It's always good practice to tell the function what value to return, rather than relying on the default. 
+
+# example
+
+```
+my_function <- function (c, reps=2) {
+  for (i in 1:reps) {
+    print (x)
+    }
+  for (i in 1:nrow(x)) {
+    print (x[i, ])
+    }
+  return (NULL)
+}
+```
+
+Now define some data to test:
+```
+x <- tibble(name= c("tony","Clare"), major= c("Biology", "Anthro"))
+x <- bind_rows(x,x)
+my_function(x)
+```
+
+## Joins
+
+Merges information from two different tables
+
+Inner Joins
+  Most Common kind of join. Takes two tables, finds     where they have overlapping variables, and makes a 
+  combined table.
+Outer Joins
+  Finds matching keys from two different tables to      make one, as above, BUT keeps unmatched keys and
+  just puts "NA" where some variables do not exist.
+  Can be left (keeps all left hand variables), right 
+  (same but right), or both (keeps keys from both)
+  
+# Practicing Joins
+
+```
+#Load datasets
+q <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/papers.csv"
+b <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/creators.csv"
+p <- read_csv(q, col_names=TRUE)
+c <- read_csv (b, col_names=TRUE)
+```
+
+This code will just split one column into multiple columns:
+```
+p <- p |>
+  separate_wider_delim(cols = Author,
+                      delim = ";",
+                      names = c("First Author", "A2", "A3", "A4"), 
+                      too_few = "align_start", too_many = "drop")
+head (p)
+```
+
+This one works similar to unique and pulls out unique entries
+```
+c<- c |>
+  distinct ( )
+head(c)
+```
+
+Now we're going to run an inner join connecting the two.
+```
+inner <- inner_join(c,p, by = c("fullName" = "First Author"))
+# or, the opposite 
+inner <- inner_join(p,c, by= c("First Author" = "fullName"))
+```
+
+Left/right join:
+```
+left <- left_join(c,p, by = c("fullName" = "First Author))
+right <- right_join(p,c, by = c("First Author" = "fullName"))
+```
