@@ -1,0 +1,92 @@
+---
+title: "Feb 14 notes"
+output: html_document
+date: "2024-02-14"
+---
+
+## Statistics bb
+
+# Big Ideas
+  Population vs sample
+  Parameter vs statistic
+  measures of location (central tendancy) and spread
+  
+Some key summarizing aspects of statistics include a measure of location (central tendancy) for a distribution and a measure of spread or scatter around that location.
+
+  Location
+    - mean (average)
+    - median
+    - mode
+    - harmonic mean (geometric mean. 1/value of each observation and find the average of that)
+    
+    Spread
+    - mean deviation (avg of abs values of deviation from mean)
+    - mean squared deviation (avg of squared deviations from mean)= variance
+    - standard deviation (square root of deviance)
+    - population variance = a parameter = SS/N = sigma squared
+        N= population size
+        sum((x-mean(x))^2)/length(x)
+    - sample variance = a statistic = SS/n-1 =s squared
+        n= sample size
+        var()
+    - population standard deviation = a paramenter = sigma
+        radiant::sdpop()
+    - sample standard deviation = a statistic= sigma
+        sd()
+        
+# Challenge
+write challenge to make population variance
+```
+popvar <- function (x) {
+sum ((x-mean(x))^2)/length(x)
+}
+a <- c(1,2,3,4,5,6,7,8,9,10)
+popvar(a)
+```
+
+Drawing and sampling to see how things work:
+
+```
+install.package ("mosaic")
+library (mosaic)
+mu <- 10
+sigma <- 2
+plotDist ("norm", mean=mu, sd=sigma, xlab="x", ylab="Frequency")
+```
+
+Now we'll draw a sample out of the distribution and look at stats that define that sample
+```
+s <- rnorm (n=10, mean=10, sd=2)
+mean(s)
+sd(s)
+s <- rnorm (n=1000, mean=10, sd=2)
+mean(s)
+sd(s)
+```
+
+These are called sampling distribution. Sample distribution is a set of possible statistics that could have been generated if the data collection process is repeated many times, along with the probabilities of these possible values. 
+
+Let's create a sampling distribution for the mean of sample drawn from normal distribution with a mean of 10 and a sd of 2
+
+```
+reps <- 500
+samp_dist_mean <- do(reps) * mean(rnorm(n =10, mean=10, sd=2))
+str(samp_dist_mean)
+```
+
+Then you can PLOT the sample distributions
+
+```
+histogram (~ mean, data= samp_dist_mean, xlab= "Samp Dist for the Mean")
+```
+
+# standard error
+How far off is a statistic that we calculate based off sample variation?
+  Standard error (SE) [SLIDE CHANGED TOO EARLY ALAS]
+  
+# Confidence Intervals
+The SE can be used to derive another measure of uncertainty in a statistic's value: the confidence interval or CI.
+
+The CI is thus another way of describing a statistic's sampling distribution, and it plays a central role in basic inferential statistics. It is an interval around our estimate of mean of sampling distribution for a specific statistic(generally mean). It gives a range of values into which subsequent estimates of a statistic would be expected to fall a critical poriton of the time.
+
+A higher confidence is associated with a wider interval. The "95% CI" around a statistic, for example, describes the range of values into which a new estimate of that statistic derived from a new sample would be expected to fall 95% of the time. 
