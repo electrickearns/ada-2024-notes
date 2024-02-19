@@ -1,0 +1,29 @@
+---
+title: "Feb 19 notes"
+author: "Amber"
+date: "2024-02-19"
+output: html_document
+---
+
+# Quick notes on RMD docs
+- Use text outside of code blocks liberally. 
+- Number of hashtags changes title size. (more hashtags, smaller titles)
+- put {r} at beginning of code chunks. If you don't want it to evaluate code, put eval = FALSE
+
+#Estimating standard error in a sample... 3 ways
+ ## One
+    If a population variance/standard deviation is known
+    - standard deviation of population / sqrt (sample size)
+    - =expected standard error in a sample.
+    
+  ## Two
+    If we can sample 
+    
+    [FINISH THIS SECTION LATER CAUSE HE MOVED ON]
+    
+## Challenge
+
+```
+{r}
+
+```
