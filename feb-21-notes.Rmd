@@ -1,0 +1,177 @@
+---
+title: "Feb 21 Notes"
+output: html_document
+date: "2024-02-21"
+---
+
+## Confidence Intervals
+
+Continued from 2/19 notes. 
+
+### Calculating CIs by Boostrapping
+  An alternative way to calculate confidence interval for a given statistic is by "boostrapping' from the data in a single sample using a Monte Carlo simulation process.
+  Boostrapping allows us to approximate a sampling distribution without access to the population from which samples are drawn and without making any assumptions about the theoretical shape of the sampling distribution.
+  
+##### Bootstrap Distribution:
+```
+{r}
+s <- 1:40
+n_boot <- 10000
+boot <- vector(length=n_boot)
+n <- length(s)
+# the sample of each bootstrap sample should equival
+for (i in 1:n_boot) {
+  boot [[i]] <- mean(sample(s, n, replace=TRUE))
+}
+hist(boot, breaks=25, ylim=c(0,1600))
+}
+```
+
+## Hypothesis Testing
+
+### Null Hypothesis Significance Testing 
+- Classical hypothesis testing typically involves formally stating a claim- the null hypothesis- which is then followed up by statistical evaluation of the null versus an alternative hypothesis.
+
+- The null hypothesis is interpreted as a baseline hypothesis and is the claim that is presumed to be true. That claim is typically that a particular value of a population parameter estimation by a sample statistic we have calculated is consistent with a particular null expectation. The alternative hypothesis is thae conjecture that we are testing, usually that the sample is inconsistent with a null expectation.
+  - Ex
+    null hypothesis: sample stat shows no deviation from what is expected or neutral based on parameter of possible outcomes under the presumed random campling process
+    alternative hypothesis: a sample stat deviates more than expected.
+
+#### To effect a hypothesis test, we need to:
+  - Calculate a test statistic based on our data
+  - CAlculate the p value associated with that test statistic, which is the probability of obtaining a result that is as higher or higher than our statistic by chance assuming the null hypothesis is true.
+  - This is usually done by comparing the value to some appropriate standardized sampling distribution with well-known mathematical properties (ex- gaussian or t)
+  - Evaluate whether the p value is less than or greater than the significance level, or alpha, that we set for our test. Alpha can be thought of as the cutoff level for p values below which we feel comfortable rejecting a null hypothesis. 
+
+#### Challenge
+Lode data
+```
+{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/vervet-weights.csv"
+d <- read_csv(f, col_names = TRUE)
+head(d)
+```
+
+Find the mean
+```
+{r}
+mean(d$weight)
+```
+This is a one-tailed, upper-tailed hypothesis: the vervets are bigger this year. This is the null hypothesis. The alternative hypothesis is that thy're the same size.
+
+Calculate mean, standard deviation, and standard error
+```
+{r}
+mu <- 5
+x <- d$weight  # current weights
+n <- length(x)
+(m <- mean(x))
+(s <- sd(x))
+(se <- s/sqrt(n))
+```
+
+Ratio between our estimation of mean from the expectation
+```
+{r}
+z <- (m-mu)/se
+z
+```
+z would be zero if there was no difference in size. 
+
+p for probability:
+```
+{r}
+p <- 1- pnorm(z)
+p
+```
+one tailed z-test (does not include mu)
+```
+{r}
+alpha <- 0.05
+(ci <- m- qnorm(1 - alpha, mean=0, sd=1)* se)
+```
+
+Two tailed z- test (does not include mu)
+```
+{r}
+alpha <- 0.05
+(ci <- m+ c(-1,1)* qnorm(1-alpha/2, mean=0, sd=1)* se)
+```
+
+t-test
+```
+{r}
+(p <- 1- pt(z, df= n-1))
+(z)
+(critical_val <- qt(0.95, df= n-1))
+ci <-c(m -qt(1-alpha, df =n-1)* se, Inf)
+ci
+
+#this function does it all by itself
+(t_stat <- t.test(x=x, mu=mu, alternative= "greater"))
+```
+
+#### Challenge 2
+```
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/woolly-weights.csv"
+d <- read_csv(f, col_names = TRUE)
+head(d)
+```
+Then, calculate the mean, standard deviation, and SE of your sample:
+```
+x <- d$weight
+n <- length(x)
+(m <- mean(x))
+(s <- sd(x))
+(se <- s/sqrt(n))
+```
+
+Then, calculate the T statistic and determine the associated p value. mu is the average body weight given in the question, 7.2
+```
+mu <- 7.2
+t_stat <- (m - mu)/se
+t_stat
+```
+
+p-value
+```
+p_upper <- 1 - pt(abs(t_stat), df = n - 1)
+# or 1 - pt(t_stat, df=n-1, lower.tail = FALSE)
+p_lower <- pt(-1 * abs(t_stat), df = n - 1)
+# or pt(t_stat, df=n-1, lower.tail = TRUE)
+p <- p_upper + p_lower
+p
+```
+
+how to plot it
+```
+{r}
+plotDist("t", df = n - 1, main = paste0("t Distribution with DF = ", n - 1, "\nred area = 2.5% in each tail",
+    "\nblue = ", round(p, 4) * 100, "%"), ylab = "", xlab = "SD", xlim = c(-4, 4))
+ladd(panel.abline(v = abs(t_stat), col = "blue", lty = 1, lwd = 2))
+ladd(panel.abline(v = -1 * abs(t_stat), col = "blue", lty = 1, lwd = 2))
+
+# plot upper tail
+ladd(panel.polygon(cbind(c(abs(t_stat), seq(from = abs(t_stat), to = 4, length.out = 100),
+    4), c(0, dt(seq(from = abs(t_stat), to = 4, length.out = 100), df = n - 1), 0)),
+    border = "black", col = rgb(0, 0, 1, 0.5)))
+
+# plot lower tail
+ladd(panel.polygon(cbind(c(-4, seq(from = -4, to = -1 * abs(t_stat), length.out = 100),
+    -1 * abs(t_stat)), c(0, dt(seq(from = -4, to = -1 * abs(t_stat), length.out = 100),
+    df = n - 1), 0)), border = "black", col = rgb(0, 0, 1, 0.5)))
+
+alpha <- 0.05
+critical_val <- qt(1 - alpha/2, df = n - 1)  # identify critical values - boundaries for 95% of the t distribution
+ladd(panel.abline(v = abs(critical_val), col = "red", lty = 2, lwd = 2))
+ladd(panel.abline(v = -1 * abs(critical_val), col = "red", lty = 2, lwd = 2))
+
+ladd(panel.polygon(cbind(c(critical_val, seq(from = critical_val, to = 4, length.out = 100),
+    4), c(0, dt(seq(from = critical_val, to = 4, length.out = 100), df = n - 1),
+    0)), border = "black", col = rgb(1, 0, 0, 0.5)))
+
+ladd(panel.polygon(cbind(c(-4, seq(from = -4, to = -1 * abs(critical_val), length.out = 100),
+    -1 * abs(critical_val)), c(0, dt(seq(from = -4, to = -1 * abs(critical_val),
+    length.out = 100), df = n - 1), 0)), border = "black", col = rgb(1, 0, 0, 0.5)))
+```
+
