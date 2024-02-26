@@ -1,0 +1,106 @@
+---
+title: "feb 26 notes"
+output: html_document
+date: "2024-02-26"
+---
+
+```
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/tbs-2006-2008-ranges.csv"
+d <- read_csv(f, col_names = TRUE)
+```
+
+# Data exercise
+Determine mean, SD, and SE in kernel95 home range size for each sex.
+```
+d_male <- filter (d, sex=="M")
+d_female <- filter (d, sex=="F")
+n_f <- length (d_female$kernel95)
+n_m <- length (d_male$kernel95)
+#female
+fem_mean <- mean (d_female$kernel95)
+s_f <- sd(d_female$kernel95)
+se_f <- (s_f/sqrt(n_f))
+
+#male
+m_mean <- mean (d_male$kernel95)
+s_m <- sd(d_male$kernel95)
+se_m <- (s_m/sqrt(n_f)) 
+```
+OR WAY EASIER
+```
+summ_stats <- d %>% group_by(sex) %>% 
+  summarize (n = n(),
+    mean= mean(kernel95),
+    sd= sd(kernel95),
+    se = sd/sqrt(n))
+```
+
+Boxplot comparing kernel95 by sex
+```
+boxplot(d_female$kernel95)
+boxplot(d_male$kernel95)
+# together unfinished boxplot (d$kernel95, d$sex)
+```
+
+for exach sex, generate a bootstrap distribution, resampling each sex 10,000 times
+```
+n_boot <- 10000
+boot_m <- vector(length=n_boot)
+boot_f <- vector(length=n_boot)
+n_m <- 9
+n_f <- 11
+
+for (i in 1:n_boot) {
+  boot_f[[i]] <- mean(sample(d_female$kernel95, n_f, replace= TRUE))
+  boot_m[[i]] <- mean(sample(d_male$kernel95, n_m, replace= TRUE))
+}
+```
+
+plot an appropriate normal distribution over the boostrap code
+```
+histogram (boot_f)
+plotDist("norm", mu = 319, sd= 65.7)
+```
+determine 95% CI in home range size for each sex
+  using quantile() method
+  using theory-based method based on qnorm()
+  
+  ```
+ #using quantile () method
+ lower <-quantile(boot_f, 0.025)
+ upper <-quantile(boot_f, 0.975)
+ (ci <- c(lower/upper))
+ 
+ #using theory based method based on qnorm()
+lower <- 319 + qnorm(p = 0.025)* se_m
+upper <- 319 + qnorm(p = 0.975) * se_m
+
+#anotha one
+(ci <- quantile(boot_f, c(0.025,0.975)))
+```
+
+# Inferential analysis challenge
+Is there a signficant difference in mean home range size of males and females?
+
+What is Hnull? What is Ha?
+
+Two sample t-test?
+  What is the test statistic
+  
+#t test
+Try programming your own two sample permutation test alternative to the t-test
+  what is the test statistic
+  
+  x thing is mean
+  s is standard mean of deviation
+  n is numer in sample
+  
+```
+sp <- ((8* (s_m)^2)+(10*(s_f)^2))/(18)
+t <- ((m_mean - fem_mean- 0)/(sqrt(sp*((1/n_f)+(1/n_m)))))
+```
+Compare to t-test function
+```
+t.test(d_female$kernel95, d_male$kernel95, alternative= c("two-sided))
+```
+
