@@ -1,0 +1,166 @@
+---
+title: "feb 28"
+output: html_document
+date: "2024-02-28"
+---
+
+# Coming up
+Data replication assignment will be due April 1st! so we have some time, but you should start ASAP. 
+Should need one descriptive statistic, one visual analysis, and one data heavy one.
+
+Make sure your markdown document can knit in a completely empty environment (i.e. if you need packages, make sure you include code to install and activate them)
+
+# More Null Hypothesis testing and such
+
+```
+{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/tbs-2006-2008-ranges.csv"
+d <- read_csv(f, col_names = TRUE)
+```
+
+## let's program our own two-sample permutation test alternative to the t-test.
+HOW TO APPROACH:  
+  First, what should we use as a test statistic?
+    - difference between means for the two groups
+  What is the null hypothesis?
+    - mean for males and females is the same OR the mean fo rone sex is greater/ less than the other sex?
+  Generate a permutation distribution for the test statistic of interest
+    - requires permutation to break association we want to test here, between sex and home range size.
+  Determine the p-value associated with seeing a test statistic as high as the on we observe if the null hypothesis of no difference is correct.
+  
+Set-up  
+```
+{r}
+males <- filter (d, sex=="M")
+females <- filter (d, sex=="F")
+obs <- mean(males$kernel95)-mean(females$kernel95)
+```
+
+Set up the permutation. 
+Filter filters by sex. Summarize summarizes the mean of each permutation, and pull holds it
+```
+{r}
+n_perm <- 10000
+perm <- vector(length= n_perm)
+s <- d #so that we can keep a copy of d while chaning it in permutations
+
+for (i in 1:n_perm){
+  s$sex <- sample(s$sex)
+  mean_m <- s %>%
+    filter (sex == "M") %>%
+    summarize (mean= mean(kernel95)) %>%
+    pull()
+  mean_f <- s %>%
+    filter (sex == "F") %>%
+    summarize (mean= mean(kernel95)) %>%
+    pull()
+  perm [[i]] <- mean_m - mean_f
+}
+```
+
+map it
+```
+{r}
+hist(perm)
+abline (v= obs)
+```
+## getting the p value for 2 tailed test
+```
+{r}
+p <- (sum(perm >= abs(obs)) + sum(perm <= -abs(obs)))/n_perm
+
+# for one tailed test, do the same but one side only
+p <- (sum(perm >= abs(obs))
+```
+
+##using {infer} to do the same thing!
+It offers a convenient set of functions and a standard workflow for using permutation methods for hypothesis testing, whether we're dealing with means, differences between means, proportions, or differences in proportions. 
+
+first we use the function specify() to indicate the variables we are interested in
+```
+{r}
+d <- d %>% specify(formula= kernel95 ~ sex)
+
+#then add a hypothesis. This just adds an explanatory variable to your dataset
+d <- d %>% hypothesize(null= "independence")
+
+#run permutations
+perm <- d%>% 
+  generate (reps= n_perm, type= "permute")
+
+#calculate
+perm <- perm %>%
+  calculate(stat="diff in means", order=c("M","F")
+  
+#visualize
+visualize(perm, bins=20)
+  shade_p_value(obs_stat= obs, direction ="both")
+  
+#get_p_value function will also show p-value
+```
+# Intro to Regression
+
+## What is it?
+A common form of data modeling. Basic premise is to explore the relationship between:
+  - an outcome variable (often denoted as y) also called dependent or response variable
+  - one or more explanatory/predictor variables, also called independent variables or covariates
+  
+### Regression types
+Simple (general) linear regression
+  - outcome is a continuous numerical variable, single predictor that is either numerical or categorical
+
+Multiple (general) linear regression
+  - outcome is a continuous numerical variable, multiple predictors that are either numerical or categorical
+
+ANOVA/ANCOVA
+  - focuses on categorical predictors
+
+"generalized" linear regression
+  - allows for binary, categorical, count variables as outcomes
+
+## Before modeling, start with exploratory data analysis
+- Univariate summary statistics... e.g., skim() from {skimr}
+- Bivariate summary statistics
+  - covariance expresses how much two numeric variables are changing together and whether the change is positive or negative
+  - correlation coefficient is a standardized form of covariance that summarizes, on a scale from -1 to [HE WENT TOO FAST OOP]
+  
+## Programming exercise
+``` 
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/zombies.csv"
+d <- read_csv (f, col_names = TRUE)
+```
+
+Plot realtionship between zombie apocalypse survivor weight and height
+
+calculate covariance by hand then with cov() function. And correlation coefficient by hand and with cor().
+
+```
+{r}
+plot(d$weight, d$height)
+```
+
+Covariance
+```
+{r}
+n <- length (d$weight)
+covhand <- sum(((d$weight- mean(d$weight))*(d$height- mean(d$height)))/(n-1))
+cov(d$weight, d$height)
+```
+
+correlation coefficient
+```
+{r}
+corhand <- cov(d$weight,d$height)/ (sd(d$weight)*sd(d$height))
+cor(d$weight, d$height)
+```
+
+## Main purposes of regression
+- to use one or more variables to predict the value of an outcome variable y
+- to explicitly describe and quantify the relationship between outcome variable y and a set of explanatory variables x, determine the significance of relationships, generate measurements summarizing these relationships, and possibly identify the causal relationships between the variables.
+- to develop and choose among different models of the relationship between variables of interest
+- to do analyses of covariation among sets of variables to identify/explore their relative explanatory power 
+
+## Formula notation for regressions
+- We typically model the outcome variable y "as a linear function" of the explanatory/predictor variables.
+- The beta valeus in this equation are referred to as "regressions coefficients", and it is those coefficients that our analysis is trying to estimate while minimizing, according to some criterion, the error term .
+[ see online for formulae]
