@@ -1,0 +1,129 @@
+---
+title: "march 4 notes"
+output: html_document
+date: "2024-03-04"
+---
+
+## Permutations continued
+ One common criterion is ORDINARY LEAST SQUARES
+ [he moved off of slide too quick]
+ 
+###PRACTICE
+```
+{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/zombies.csv"
+d <- read_csv(f, col_names = TRUE)
+```
+
+Estimating slope:
+
+```
+{r}
+d <- mutate(d, centered_height = height - mean(height))
+d <- mutate(d, centered_weight = weight - mean(weight))
+
+p1 <- ggplot(data = d, aes(x = weight, y = height)) + geom_point()
+p2 <- ggplot(data = d, aes(x = centered_weight, y = centered_height)) + geom_point()
+``` 
+
+Create custom function slope.test
+```
+slope.test <- function(beta1, data) {
+    g <- ggplot(data = data, aes(x = centered_weight, y = centered_height))
+    g <- g + geom_point()
+    g <- g + geom_abline(intercept = 0, slope = beta1, size = 1, colour = "blue",
+        alpha = 1/2)
+    ols <- sum((data$centered_height - beta1 * data$centered_weight)^2)
+    g <- g + ggtitle(paste("Slope = ", beta1, "\nSum of Squared Deviations = ", round(ols,
+        3)))
+    g
+}
+```
+
+then we can play with the manipulate package! this will let you look for the Best beta value that minimizes the sum of squared deviations. 
+```
+manipulate(slope.test(beta1, data = d), beta1 = slider(-1, 1, initial = 0, step = 0.005))
+```
+
+analytically, for a univariate regression (one predictor, one outcome variable), we can solve for beta coefficients:
+[FORMULA THAT IS HARD TO COPY OVER LOL.]
+Slope= cor(x,y)(sd(y)sd(x)) = cov(x,y)/var(x)=SS(xy)
+
+
+And the line of best fit needs to go through the means of the outcome and predictor variable so:
+B_0 = MeanY - Slope*MeanX
+
+```
+{r}
+b1 <-
+cor (d$height, d$weight) * sd(d$height)/sd(d$weight)
+# or
+b1 <- cov(d$height, d$weight)/var(d$weight)
+
+#then to calculate b0
+b0 <- mean(d$height) - b1*mean(d$weight)
+```
+
+## Exercise 1
+Load in data
+```
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/Street_et_al_2017.csv"
+s <- read_csv(f, col_names = TRUE)
+```
+
+Plot brain size (ECV) as a function of social group size, longevity, juvenile period length, and reproductiove lifespan (separate for each)
+```
+{r}
+plot1 <- ggplot(data = s, aes(x = Group_size, y = ECV), na.rm= TRUE) + geom_point()
+plot2 <- ggplot(data = s, aes(x = Longevity, y = ECV), na.rm= TRUE) + geom_point()
+plot3 <- ggplot(data = s, aes(x = Weaning, y = ECV), na.rm= TRUE) + geom_point()
+plot4 <- ggplot(data = s, aes(x = Repro_lifespan, y = ECV), na.rm= TRUE) + geom_point()
+```
+
+Derive by hand the ordinary least squares regression coefficients B1 and B0 for ECV ~ social group size
+```
+{r}
+#start by filtering out blanks
+s1 <- s %>% filter(!is.na(Group_size) & !is.na(ECV))
+b1 <- cov(s1$ECV, s1$Group_size)/var(s1$Group_size)
+b0 <- mean(s1$ECV) - b1*mean(s1$Group_size)
+```
+
+Confirm you get the same results using the lm() function
+m <- lm (formula = ECV ~ Group_size, data=s)
+m <- lm(EVC ~Group_size, s)
+COME BACK AND LOOK AT THIS PART IN THE RECORDING CAUSE WTF HAHA
+```
+{r}
+m <- lm (formula = ECV ~ Group_size, data=s1)
+m <- lm(ECV ~Group_size, s1)
+
+#ways to look at this data
+tidy(m)
+summary(m)
+names(m)
+broom::glance(m)
+```
+
+Repeat the analysis above for different groups of primates separately. 
+```
+{r}
+#basically filter() to create three new data sets, then do the lm thing
+```
+how to tell if the differences are significant? you can permute your data for both and find out! 
+
+## Key Assumptions of Linear Regression
+- sample is representative of the population and is unbiased
+- predictor variables are measured with no error
+- Residuals have a expected value (mean) of zero and are normally distributed
+    - QQ plots, wIlks- shapiro etc, skew of residuals
+- The relationship between the predictor variable and the response is not "nonlinear"
+   - plot outcome versus predictor
+   - plot residuals versus fitted values
+- The variance of the residuals is constant across the range of predictor variables ("Homoscedasticity")
+   - plot residuals versus predictor, residuals versus fitted values
+- For multiple regression: predictors are not highly coorrelated.
+   - examine correlation matrix
+   - computer variabce inflation factor (VIF) which measures how much multicollinearity increases when each predictor is added to a model
+  
+  
