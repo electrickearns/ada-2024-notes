@@ -1,0 +1,146 @@
+---
+title: "March 6 Notes"
+output: html_document
+date: "2024-03-06"
+---
+
+## Elements of Regression analysis
+
+The goal of regression is to partition variance in the outcome/response variable among different sources, i.e., into that explained by the regression model itself versus the left-over error or residual variance.
+
+We can separate or "partition" the total variance in our y (response variable, the sum of squares of y, or SSY) into that explaine dby our model (the regression sum of squares or SSR) and that which is left over as "error" (the error sum of squares or SSE).
+  - SSY = SSR + SSE
+  
+## Challenge
+
+```
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/zombies.csv"
+d <- read_csv (f, col_names=TRUE)
+
+#regression model with our zombie apocalypse survivor dataset
+m <- lm(data=d, height ~weight)
+
+# SSY= height-mean(height)
+SSY <- sum((m$model$height -mean(m$model$height))^2)
+
+#SSR= predicted hieght- mean height
+SSR <- sum ((m$fitted.values-mean(m$model$height))^2)
+
+#SSE= height- predicted height
+SSE <- sum ((m$model$height - m$fitted.values)^2)
+```
+
+### Mean Square
+From here, we can calculate the variance in each of these components, typically referred to as the mean square, by dividing each sum of squares by its corresponding degrees of freedom (recall that a variance can be thought of as an average "sum of squares")
+
+  The number of degrees of freedom for the total sum of squares (SSY) is n-1....we need to estimate one parameter from our data(mean value of y) before we can calculate SSY
+
+  The degrees of freedom for the SSE is equal to the number of predictor variables (p). This is because, given a regression equation, we need to know only the value of p predictor variables in order to calculate the predicted value of a response variable.
+
+  The number of degrees of freedom for the SSE is equal to n-(p+1) because we need to estimate p+1 parameters (an intercept plus a coefficient for each predictor) from our data before we can calculate the error sum of squares.
+
+```
+{r}
+MSY <- SSY/999
+MSR <- SSR/1
+MSE <- SSE/998
+```
+
+### Anova Tables: F ration
+Thelast item we need to calculate is the F ratio, the ratio of variance explained by the regression model to the remaining, unexplained variance. 
+
+```
+{r}
+fratio <- MSR/MSE
+```
+
+We can then test the overall significance of our regression model by evaluating our F ration test statistic against an F distribution, taking into account the number of degrees of freedom in each. 
+
+The p value associated with a particular value of the F statistic is simply the area under an "F distribution" curve to the right of the F statistic value (i.e. 1 minus the cumulative probability up to that point)
+
+```
+{r}
+pf(q=fratio, df1=1, df2=998, lower.tail = FALSE)
+#or
+1-(pf pf(q= fratio, df1=1, df2=998))
+```
+Using R
+```
+{r}
+summary (a)
+summary.aov(m)
+```
+
+R squared ->
+summary(m) also gives us an R squared value; this is the fraction of the total variation present in our response variable that is explained by our model, or, as we defined above, SSR/SSY! 
+
+## Challenge 2
+```
+{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/Street_et_al_2017.csv"
+s <- read_csv(f, col_names = TRUE)
+
+m <- lm(formula= log(ECV) ~log(Body_mass), data=s)
+m <- lm (log(ECV) ~log(Body_mass), s)
+```
+
+Derive by hand the ordinary least squares regression coefficients B1 and B0 for log(ECV) ~ log(Body_Mass)
+```
+{r}
+#filter out blanks
+s <- s %>% 
+  drop_na(ECV, Body_mass) %>%
+  mutate(logECV= log(ECV), logBM=log(Body_mass))
+  
+b1 <- cor (s$logECV, s$logBM) * sd(s$logECV)/sd(s$logBM)
+
+b0 <- mean(s$logECV) - b1*mean(s$logBM)
+```
+Confirm you get the same results with lm() function
+
+```
+{r}
+m <- lm(formula= log(ECV) ~log(Body_mass), data=s)
+summary (m)
+```
+
+Derive by hand the ANOVA tabled for the regression of log(ECV) and logBM
+```
+{r}
+#Squares
+SSY <- sum((m$model$logECV - mean(m$model$logECV))^2)
+SSR<- sum ((m$fitted.values- mean(m$model$logECV))^2)
+SSE<- sum ((m$model$logECV - m$fitted.values)^2)
+
+#degrees of freedom
+df_y <- nrows(s)
+df_ r <- 1
+df_e <- nrows(s) -1-1
+
+# mean squares
+MSY <- SSY/dr_y
+MSR <- SSR/df_r
+MSE <- SSE/df_e
+
+#fratio
+fratio <- MSR/MSE
+
+#plot it
+ggplot(s, aes(x=logBM, y=logECV)) + 
+  geom_point() +
+  geom_smooth(method="lm")
+```
+
+Determine the SE for the regression model, the slope and the intercept. 
+
+SE <- sqrt((MSE)/(SSX))
+  SSX <- sum of squares of x or x variation
+  
+```
+{r}
+
+SSX <- sum((s$logBM -mean(s$logBM))^2)
+se_b1 <- sqrt(MSE/SSX)
+
+```
+```
