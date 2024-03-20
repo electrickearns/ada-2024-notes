@@ -1,0 +1,120 @@
+---
+title: "mar 20 notes"
+author: "Amber"
+date: "2024-03-20"
+output: html_document
+---
+
+## Regression with Categorical Predictors
+
+```
+{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/AVONETdataset1.csv"
+d <- read_csv(f, col_names = TRUE)
+
+d <- d %>%
+select(Species1, Family1, Order1, Beak.Width, Beak.Depth, Tarsus.Length, Wing.Length, Tail.Length, Mass, Habitat, Migration, Trophic.Level, Trophic.Niche, Min.Latitude, Max.Latitude, Centroid.Latitude,Range.Size,Beak.Length_Culmen, Primary.Lifestyle)
+```
+
+### Continuing from Mar 18
+
+##Post- Hoc tests
+After finding a significiant omnibus F statistic in an ANOVA, we can test, post-hoc, what group means are different from one another using pairwise t tests with an appropriate p-value correction or a Tukey Honest Significant Differences test.
+
+```
+{r}
+m1aov <- aov(log(Mass)~Trophic.Level, data=d)
+#this creates a similar summary to the above work to produce m1/m2.
+summary (m1aov)
+
+#test combination of categorical levels
+(pairwise.t.test(log(d$Mass), d$Trophic.Level, p.adj = "bonferroni"))
+# Carnivores and omnivores do not have a significant difference in mass.
+
+#another way to do this
+(posthoc <- TukeyHSD (m1aov, which="Trophic.Level", conf.level=0.95))
+```
+
+Permutation approach to inference using {infer}
+```
+{r}
+original.F <- aov(log(Mass) ~Trophic.Level, data=d) %>% 
+  tidy () %>%
+  filter (term =="Trophic.Level")
+  
+original.F #results for F stat and p value for omnibus F test
+```
+
+To use infer to create a permutation distribution
+```
+d <- d %>%
+  mutate(logMass = log(Mass))
+
+permuted.F <- d %>%
+  specify(logMass ~ Trophic.Level) %>%
+  hypothesize (null= "independence") %>%
+  generate (reps=1000, type = "permute") %>%
+  calculate (stat = "F")
+
+hist(permuted.F$stat)
+
+visualize(permuted.F)
+  shade_p_value(obs_stat = original.F$statistic, direction = "greater")
+  ```
+Using a permutation approach to calculate a p-value is a better method to calculate p-value, but should lead to the same result!
+* Remember there's nothing special about .5, it's just what most people think of when they think about significance!
+
+## Multi-factor ANOVA
+Sometimes the data we are interestd in is characterized by multiple grouping variables (e.g., Trophic.Level and Migration). In this case, we are interested in the main effect of each factor on the variable of interest (e.g., does mass vary according to trophic and migratory status) while accounting for the effects of the other factor. 
+We may also be interested in any interactive effects among factors. Thus, in multiple factor ANOVA, we are interesting in testing several null hypotheses simulataneously: 
+  - that each factor ahs no effect on the mean value of a continuous response variable
+  - that there are no interactive effects of sets of factors on the mean of our continuous response variable.
+  
+Model description and testing for multiple-factor ANOVA is a simple extension of the formula notation we've used for single factors
+
+### Coding Challenge
+```
+{r}
+# Create variable relative.beak.length=residual of log(Beak.Length_culmen) ~log(Mass)
+
+d$relBL <- resid(lm(formula=log(Beak.Length_Culmen) ~ log(Mass), data= d))
+
+# Create variable relative.tarsus.length=residual of log(Tarsus.Length) ~log(Mass)
+
+d$relTL <- resid(lm(formula=log(Tarsus.Length) ~ log(Mass), data= d))
+
+#make boxplot of relative tarsus length by primary lifestyle
+
+ggplot(d %>%
+  filter(!is.na(Primary.Lifestyle)), aes(x=Primary.Lifestyle, y=relTL)) +
+  geom_boxplot()
+
+#make a boxplot of relative beak length by torphic niche
+
+ggplot(d, aes(x=Trophic.Niche, y=relBL)) +
+  geom_boxplot()
+
+#run an ANOVA analyses to look at the association between geographic range size and migratory status
+
+m <- aov (Range.Size ~ as.factor(Migration), data=d)
+summary(m)
+TukeyHSD(m)
+```
+
+
+More challenge!
+```
+{r}
+#:Limit data to Passeriformes
+
+s <- d %>%
+  filter (d$Order1 == "Passeriformes")
+  
+# Run ANOVA analyses to look at association between relativebeak length and primary lifestyle AND between relative beak length and trophic level. 
+
+m_1 <- aov (relBL ~ Primary.Lifestyle, data=s)
+
+m_2 <- aov (relBL ~ Trophic.Level, data=s)
+
+m_combined <- aov (relBL ~ Trophic.Level + Primary.Lifestyle + Trophic.Level:Primary.Lifestyle, data=s)
+```
