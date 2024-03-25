@@ -99,6 +99,11 @@ ggplot(d, aes(x=Trophic.Niche, y=relBL)) +
 m <- aov (Range.Size ~ as.factor(Migration), data=d)
 summary(m)
 TukeyHSD(m)
+
+# another plot
+ggplot(d |> filter(!is.na(Migration)), aes (x= as.factor(Migration), y=log(Range.Size))) +
+  geom_boxplot() +
+  geom_jitter(alpha=0.05)
 ```
 
 
@@ -117,4 +122,19 @@ m_1 <- aov (relBL ~ Primary.Lifestyle, data=s)
 m_2 <- aov (relBL ~ Trophic.Level, data=s)
 
 m_combined <- aov (relBL ~ Trophic.Level + Primary.Lifestyle + Trophic.Level:Primary.Lifestyle, data=s)
+
+ggplot(d |> filter(!is.na(Migration)), aes (x= as.factor(Migration), y=log(Range.Size))) +
+  geom_boxplot() +
+  facet_wrap(vars(Trophic.Level)) +
+  geom_jitter(alpha=0.05)
+  
+ggplot(s, aes (x= Trophic.Level, y=log(relBL))) +
+  geom_boxplot() +
+  facet_wrap(~ Primary.Lifestyle) +
+  geom_jitter(alpha=0.05)
 ```
+
+# March 25 Notes as well
+Putting them in this doc so I can keep my environment.
+
+
