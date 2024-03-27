@@ -1,0 +1,133 @@
+---
+title: "Mar 27"
+author: "Amber"
+date: "2024-03-27"
+output: html_document
+---
+
+# Multiple regression and ANCOVA 
+
+```
+{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/zombies.csv"
+z <- read_csv (f, col_names = TRUE)
+
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/AVONETdataset1.csv"
+d <- read_csv(f, col_names = TRUE)
+d <- d %>%
+select(Species1, Family1, Order1, Beak.Width, Beak.Depth, Tarsus.Length, Wing.Length, Tail.Length, Mass, Habitat, Migration, Trophic.Level, Trophic.Niche, Min.Latitude, Max.Latitude, Centroid.Latitude,Range.Size,Beak.Length_Culmen, Primary.Lifestyle)
+```
+
+## Linear model of height as a function of weight + age + gender
+```
+{r}
+m <- lm(height ~ weight + age + gender, data=z)
+summary(m)
+```
+
+Check for multicollinearity with variance inflation factors...
+When we have more than one explanatory variable in a regression model, we need to be concerned about possible high inter-correlations among those variables. 
+  - one way to characterize the amount of multicollinearity is by examining the VIR, variance inflation factor, for each variable
+  - the VIF of a predictor is a measure of how easily it is predicted from a linear regression using the other predictors. It is calculated as:
+          1/(1-R^2) where R^2 is the Rsquared value for the regression of variable i on all other predictors
+  - If this value exceeds ~5, it indicates a problematic amount of multicollinearity among the predictors variables in the dataset, and you should drop at least one.
+  - vif() function from {car} package can be used to calculate VIF
+```
+{r}
+vif(m)
+```
+
+### Challenge
+```
+{r}
+s <- d %>%
+  filter(Order1 == "Accipitriformes") %>%
+  mutate(logMass = log(Mass)) %>%
+  mutate(logRange = log(Range.Size)) 
+m <- lm (logRange ~ logMass + Primary.Lifestyle, data = s)
+
+summary(m)
+```
+
+## Prediction!
+When using a regression model to make prediction for values of new observations, the value predicted by the regression model is known as a point estimate of the response variable for given value(s) of the predictor variables
+- the point estimate represents our best guess for the value of a new observation, but it will almost never match the value of a new observation
+- to descibe the uncertainty associated with the new predicted values, we can create confidence intervals and prediction intervals around each value of the explanatory variable(s)
+  - CIs represent our uncertainty about the mean value of the response variable at each explanatory variable value
+  - PIs represent our uncertainty about the actual new predicted values for the response at each explanatory variable value
+  
+In general:
+  - the width of a confidence interval for y_hat (predicted mean y at a given value of x) increases as x moves away from the center
+  - although both are centered at y_hat, the prediction interval is wider than the confidence interval for a given x and confidence level
+  - this makes sense since the prediction interval takes into account the tendancy of y to fluctuate from tis mean value, while the confidence interval just needs to account for uncertainty in estimation y_hat
+
+### Challenge 2
+```
+{r}
+m <- lm (height ~weight + age + gender, data=z)
+
+#What is the estimated mean height in inches for a 29 year old male who weighs 132lbs, and what is the 95% CI around this estimate of mean height?
+
+#to predict by hand, multiply variable you're predicting by the  estimate and add the intercept:
+
+prediction <- 132*0.140542 + 29*0.662458 + 1*1.609671 + 33.309791
+
+ci <- predict(m, newdata= data.frame (age=29, gender= "Male", weight= 132), interval = "confidence", level= 0.95)
+
+pi <- predict(m, newdata= data.frame (age=29, gender= "Male", weight= 132), interval = "prediction", level= 0.95)
+
+#you can also use the augment function from {broom}
+```
+
+{jtools} package-> very useful function for summarzing and visualizing regression model results!
+  - the effect_plot() function can be used to plot the relationship between one of the predictor variables and the response variable while holding the others constant
+  - the plot_summs() function can be used to nicely visualize coefficient estimates and CI values around those terms, including visualizing multiple models on the same plot.
+
+```
+{r}
+effect_plot (m, pred= weight, interval= TRUE, int.typ= "prediction", int.width= 0.95, plot.points = TRUE)
+
+plot_summs(m)
+# the estimate from tidy are what is modeled in the above
+tidy(m)
+
+plot_summs  (m, plot.distributions= TRUE, rescale.distributions = TRUE)
+```
+
+## Model Selection
+The purpose of a model selection process in a regression analysis is to evaluate explanatory variables and alternative models in order to establish which are best able to describe the response. There are different possible algorithms to use for model selection, e.g., forward and backward selection, and different ways of comparing models to one another, e.g., using F ratio tests or information criteria approaches
+
+Different approaches may result in different parameters being included in the final model
+
+There are also several different packages that we can use to combine results from several different models.
+
+Model selection is usually an iterative process, done as a part of regression analysis
+There are various criteria for evaluating alternative models, but all rely on comparing the explanatory value of more complex models vs less complex modules
+
+### CHALLENGE
+```
+{r}
+d <- d %>%
+  mutate (logMass= log(Mass),
+          logRS = log(Range.Size),
+          logBeak= log(Beak.Length_Culmen),
+          logTarsus = log(Tarsus.Length),
+          Migration = as.factor(Migration)
+  )
+```
+
+Model Evaluation using partial F tests
+  This approach looks at two or more nested models- a larger, or more complex, model that contains explanatory variables that we are interested in and smaller, less complex, models that exclude one or more of those variables.
+
+```
+{r}
+m1 <- lm(data=d, logBeak ~ logRS * Migration) #full model
+m2 <- lm (data=d, logBeak ~logRS + Migration) #model without interaction term
+m3 <- lm (data= d, logBeak ~ logRS) #model with one predictor
+m4 <- lm(data=d, logBeak ~Migration) #model with one predictor
+m5 <- lm(data=d, logBeak ~1) #intercept only model
+
+anova (m2, m1, test= "F")
+#Less complex model should always be the first in the function!
+
+```
