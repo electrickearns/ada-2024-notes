@@ -1,0 +1,117 @@
+---
+title: "April 1 notes"
+format: html
+editor: visual
+---
+
+QUICK COMMENTS:
+
+-   Text outside of code blocks and in code block to tell him what you're doing.
+
+-   if there's a question asked, answer it in text.
+
+-   show intermediate outputs. If he asks for a summary statistic or table, print it out.
+
+-   if he asks for a plot, print it out
+
+-   test render rmd or qmd code. He should be able to render it without having to edit code. Do NOT include install.packages() calls in your code.
+
+    -   BUT DO put in library()
+
+-   If you have problems, come visit in office hours
+
+## Model Selection (cont)
+
+Preliminaries
+
+```{r}
+library(tidyverse)
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/AVONETdataset1.csv"
+d <- read_csv(f, col_names = TRUE)
+d <- d %>%
+select(Species1, Family1, Order1, Beak.Width, Beak.Depth, Tarsus.Length, Wing.Length, Tail.Length, Mass, Habitat, Migration, Trophic.Level, Trophic.Niche, Min.Latitude, Max.Latitude, Centroid.Latitude,Range.Size,Beak.Length_Culmen, Primary.Lifestyle)
+d <- d %>%
+  mutate (logMass= log(Mass),
+          logRS = log(Range.Size),
+          logBeak= log(Beak.Length_Culmen),
+          logTarsus = log(Tarsus.Length),
+          Migration = as.factor(Migration)
+  )
+```
+
+Making Models
+
+```{r}
+m1 <- lm(data=d, logBeak ~ logRS * Migration) #full model
+m2 <- lm (data=d, logBeak ~logRS + Migration) #model without interaction term
+m3 <- lm (data= d, logBeak ~ logRS) #model with one predictor
+m4 <- lm(data=d, logBeak ~Migration) #model with one predictor
+m5 <- lm(data=d, logBeak ~1) #intercept only model
+```
+
+Once we have fitted a full and nested models, we can carry out partial F tests to compare particular models using the anova() function with the nested reduced and full model as arguments. The reduced model is the first in the function
+
+```{r}
+anova (m2, m1, test= "F")
+```
+
+# Forward and Backwards selection
+
+```{r}
+d_new <- d %>%  drop_na(logBeak) %>%  drop_na (logRS) %>% drop_na(Migration) %>% drop_na(Trophic.Level) %>%  drop_na(logTarsus) %>% drop_na(Primary.Lifestyle)
+  
+lm (data=d_new, logBeak ~ logRS + Migration + Trophic.Level + logTarsus + Primary.Lifestyle)
+```
+
+### Forward Selection
+
+-   Forward selection starts with an intercept-only model and then tests which of the predictor variables best improves the goodness-of-fit. Then the model is updated by adding that term and tests which of the remaining predictors would further and best improve the fit.
+
+-   The R functions add1 () and update (), respectively, perform the series of tests and update your fitted regression model. Setting the "test=" argument to F includes the partial F statistic value and its significance. the "\~" part of the "scope=" argument means, basically, what is already there, while the remainder of the scope= argument is the list o fadditional variables you might add for the fullest possible model
+
+    ```{r}
+    m_null <- lm(data =d_new, logBeak ~ 1)
+
+    #add in one
+    add1(m_null, scope= ~ logRS + Migration + logTarsus + Trophic.Level + Primary.Lifestyle, test="F")
+
+    #logTarsus has highest F value so update model to add it
+
+    m1 <- update (m_null, formula= ~ logTarsus)
+    summary(m1)
+
+    #then repeat
+
+    add1(m1, scope= ~ logRS + Migration + logTarsus + Trophic.Level +Primary.Lifestyle, test="F")
+
+    m2 <- update(m1, formula= ~ Primary.Lifestyle)
+    summary(m2)
+
+    add1(m2, scope= ~ logRS + Migration + logTarsus + Trophic.Level +Primary.Lifestyle, test="F")
+
+    m3 <- update(m2, formula= ~ Trophic.Level)
+    summary(m3)
+
+    add1(m3, scope= ~ logRS + Migration + logTarsus + Trophic.Level +Primary.Lifestyle, test="F")
+
+    #you did not finish because it wasn't working, but you keep going until significance no longer exists. 
+    ```
+
+    ### Backwards Selection
+
+    -   Backward selection starts with the fullest model you want to consider and then systematically drops terms that do not contribute to the explanatory value of the module.
+
+    ```{r}
+    m_full <- lm(data=d_new, logBeak ~ logRS + logTarsus + Migration + Trophic.Level +Primary.Lifestyle)
+
+    drop1(m_full, test="F")
+    # remove lowerest F-value
+    #check this later, I think you've copied it from him wrong?
+    m2 <- update(m_full, ~ Migration)
+    summary(m2)
+
+    drop1(m2, test = "F")
+
+    ```
+
+    ### 
