@@ -1,0 +1,31 @@
+---
+title: "model selection practice"
+format: html
+editor: visual
+---
+
+## Read in Mammal Life Histories dataset
+
+```{r}
+library(tidyverse)
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/Mammal_lifehistories_v2.txt"
+d <- read_tsv(f, col_names = TRUE)
+
+# replace 999s with NA
+is.na(d) <- d == "-999"
+is.na(d) <- d == "999"
+
+# drop refs and litter size variables
+# if {MASS} is loaded, must specify select is dplyr
+d <- d %>%
+  dplyr::select(order, family, Genus, species, `mass(g)`, `gestation(mo)`, `newborn(g)`, `weaning(mo)`, `wean mass(g)`,`AFR(mo)`, `max. life(mo)`, `litters/year`) %>%
+   mutate (logMass = log(`mass(g)`),
+          logGest = log(`gestation(mo)`),
+          logNewb = log(`newborn(g)`),
+          logWean = log (`weaning(mo)`),
+          logWeMa = log (`wean mass(g)`),
+          logAFR = log (`AFR(mo)`),
+          logMxLi = log (`max. life(mo)`), 
+          logLity = log (`litters/year`)
+          )
+```

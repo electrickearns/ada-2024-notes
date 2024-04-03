@@ -35,8 +35,10 @@ d <- d %>%
           logRS = log(Range.Size),
           logBeak= log(Beak.Length_Culmen),
           logTarsus = log(Tarsus.Length),
-          Migration = as.factor(Migration)
+          Migration = as.factor(Migration),
   )
+relBeak <- resid(lm(log(Beak.Length_Culmen) ~ log(Mass), data=d))
+relTarsus <- resid(lm(log(Tarsus.Length) ~ log(Mass), data=d))
 ```
 
 Making Models
@@ -58,8 +60,9 @@ anova (m2, m1, test= "F")
 # Forward and Backwards selection
 
 ```{r}
-d_new <- d %>%  drop_na(logBeak) %>%  drop_na (logRS) %>% drop_na(Migration) %>% drop_na(Trophic.Level) %>%  drop_na(logTarsus) %>% drop_na(Primary.Lifestyle)
-  
+d <- d %>% mutate (relBeak= relBeak, relTarsus = relTarsus)
+d_new <- d %>%  drop_na(logBeak) %>%  drop_na (logRS) %>% drop_na(Migration) %>% drop_na(Trophic.Level) %>%  drop_na(logTarsus) %>% drop_na(Primary.Lifestyle) 
+
 lm (data=d_new, logBeak ~ logRS + Migration + Trophic.Level + logTarsus + Primary.Lifestyle)
 ```
 
@@ -67,13 +70,19 @@ lm (data=d_new, logBeak ~ logRS + Migration + Trophic.Level + logTarsus + Primar
 
 -   Forward selection starts with an intercept-only model and then tests which of the predictor variables best improves the goodness-of-fit. Then the model is updated by adding that term and tests which of the remaining predictors would further and best improve the fit.
 
+-   m_null \<- lm(data =d_new, logBeak \~ 1)
+
+    #add in one
+
+    add1(m_null, scope= .\~. + logRS + Migration + logTarsus + Trophic.Level + Primary.Lifestyle, test="F")
+
 -   The R functions add1 () and update (), respectively, perform the series of tests and update your fitted regression model. Setting the "test=" argument to F includes the partial F statistic value and its significance. the "\~" part of the "scope=" argument means, basically, what is already there, while the remainder of the scope= argument is the list o fadditional variables you might add for the fullest possible model
 
     ```{r}
     m_null <- lm(data =d_new, logBeak ~ 1)
 
     #add in one
-    add1(m_null, scope= ~ logRS + Migration + logTarsus + Trophic.Level + Primary.Lifestyle, test="F")
+    add1(m_null, scope= .~. + logRS + Migration + logTarsus + Trophic.Level + Primary.Lifestyle, test="F")
 
     #logTarsus has highest F value so update model to add it
 
@@ -82,17 +91,17 @@ lm (data=d_new, logBeak ~ logRS + Migration + Trophic.Level + logTarsus + Primar
 
     #then repeat
 
-    add1(m1, scope= ~ logRS + Migration + logTarsus + Trophic.Level +Primary.Lifestyle, test="F")
+    add1(m1, scope= .~. + logRS + Migration + logTarsus + Trophic.Level +Primary.Lifestyle, test="F")
 
     m2 <- update(m1, formula= ~ Primary.Lifestyle)
     summary(m2)
 
-    add1(m2, scope= ~ logRS + Migration + logTarsus + Trophic.Level +Primary.Lifestyle, test="F")
+    add1(m2, scope= .~. + logRS + Migration + logTarsus + Trophic.Level +Primary.Lifestyle, test="F")
 
     m3 <- update(m2, formula= ~ Trophic.Level)
     summary(m3)
 
-    add1(m3, scope= ~ logRS + Migration + logTarsus + Trophic.Level +Primary.Lifestyle, test="F")
+    add1(m3, scope= .~. + logRS + Migration + logTarsus + Trophic.Level +Primary.Lifestyle, test="F")
 
     #you did not finish because it wasn't working, but you keep going until significance no longer exists. 
     ```
@@ -114,4 +123,28 @@ lm (data=d_new, logBeak ~ logRS + Migration + Trophic.Level + logTarsus + Primar
 
     ```
 
-    ### 
+    ### Continued 4/3
+
+    In the {MASS} package, there are two R functions that can act as shortcuts for the process of forward and backward selection that use an information criterion approach - e.g., Akaike Information Criterion (AIC) rather than partial F tests.
+
+-   The model with the highest AIC is the model of best fit.
+
+-   Can begin with full or null model
+
+    ```{r}
+    m_full <- lm(data=d_new, relBeak ~ logRS + relTarsus + Migration + Trophic.Level + Primary.Lifestyle)
+
+    s<- stepAIC(m_full, scope = .~., direction= "both")
+    ```
+
+-   Another alternative approach is the function dredge () in the {MuMIn} package, which explores subsets of a given global model in an automated way. Wtih dregdge (), we first run a global model that includes all the terms we wanrt consider, then run the function to fit subsets of that model without having to specify explicitly which submodels we want to run.
+
+    ```{r}
+    library (MuMIn)
+    # ISN'T WORKING m_full <- lm(data=d_new, relBeak ~ logRS, Migration + Trophic.Level +logTarsus + Primary.Lifestyle, na.action = na.fail)
+    # OOPS mods <- dredge (m_full)
+    ```
+
+    -   mods.avg \<- summary (model.avg(mods, subset = delta \<= 4, fit= TRUE)
+
+    -   
