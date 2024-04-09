@@ -1,0 +1,88 @@
+---
+title: "April 8"
+format: html
+---
+
+## General Linear Modelings
+
+- So far, our discussion of regression has centered on standard or *general linear models (GLMs)* that assume our response variables are continuously distributed and have normally distributed errors/residuals with constant variance across the range of our predictor variables.
+- When we have different kinds of response variables (such as binary or count data), or when residuals are not homoscedastic, we can sometimes use a different regression techniqued called *generalized linear modeling*
+- Generalized linear models extend simple linear regression to allow the expected value of our response variable to depend on our predictor variable(s) through what is called a link function. 
+
+### Features of GLMs
+- one of the most important differences is that in generalized linear modeling we no longer use ordinary least squares to estimate parameter values, but rather use maximum likelihood or Bayesian approaches.
+- Three components to generalized linear models
+  - The *linear component* which reflects the linear combination of predictor variabled in our model
+  - The *error structure or random component* which refers to the probability distribution of the response variable and of the residuals in the response variable after the linear component has been removed.
+  - A *link function* which connects the expected value of the response variable to the predictors. You can think of this as a transformation function.
+  
+### Predicted value of the response variable
+  - As in general linear modeling, the linear component yields a predicted value, but this value is not predicted value of our response variable, Y, per se. Rather, the predicted value from the regression model needs to be transofmed back into a predicted Y by applying the inverse of the link function.
+  - Link functions typically transform the discontinuous scale o fa categorical response variable to a continuous scale that is unbounded and that can thus be examined using regression
+
+## Common link functions
+- The *identity link*, which is used to model the mean value of the response, Y, and is what we use implicitry in standard linear models.
+- The *log link* which is typically used to model log (lambda) or the log of the mean value of Y. This link function is typically used for modeling for count data, often referred to as **Poisson or "log-linear" regression*
+- The *logit link* which is log(pi/(1-pi)), is typically used for modeling binary data, often referred to as a *logistic regression*
+
+### Model fitting by maximum likelihood rather than OLD
+- Maximum likelihood is an iterative process
+  - GLM evaluates a linear predictor for each value of the response variable given a particular set of parameter values then back-transforms the predicted value into the scale of the Y variable using the inverse of the link function.
+  - These predicted values are compared with the observed values of Y
+  - The parameters (beta coefficients) are then adjusted, and the model is refitted repeated until the fit stops improving.
+- The data are taken as a given, and we are trying to find the most likely parameter values and model to fit those data
+- We judge the fit of the particular model of the basis of how likely the data would be if the model were correct. 
+
+## Two common types of GLM
+### Logistic Regression- used when our response variable is binary
+  - We are interested in modeling pi, which is the rprobability that Y equals 1 for a given value of X (rather than the mean value of Y for that given value of x)
+  - The errors or residuals from suc a model are not normally distributed, but rather have a binomial distribution.
+  - We actually use as our response variable the log of the odds ration between our two possible outcomes, i.e., the ration of probabilites that Y= 1 versus that Y=0 for a given value of X. This ratio is known as the *logit*
+  - The logit transofmration is the link function connecting Y to our predictors. The Logit is useful as it converts probabilities, which lie in the range of 0 to 1 into the scale of the whole real number line. 
+  
+
+
+```{r}
+library(tidyverse, broom)
+
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/titanic_train.csv"
+d <- read_csv (f, col_names = TRUE)
+```
+
+```{r}
+d <- d %>%
+  select(Survived, Pclass, Name, Sex, Age, SibSp, Parch, Fare, Cabin, Embarked) %>%
+  mutate (Sex = as.factor(Sex),
+          Embarked = as.factor (Embarked),
+          Pclass = as.factor (Pclass)
+  )
+
+glimpse(d)
+
+p1 <- ggplot (data=d, aes (x=Age, y= Survived)) + geom_point()
+
+p2 <- ggplot (data=d, aes (x=Sex, y= Survived)) + geom_violin() + geom_jitter()
+
+# plot_grid (p1, p2, nrow=1)
+## plot_grid from {cowplot}
+```
+
+
+```{r}
+m <- glm (Survived ~ Sex, data=d, family= "binomial")
+summary(m)
+
+#how does this translate to ODDs scale? Need to caluclate the log(odds of survival) for each sex, then apply inverse of log() function ((exp())):
+ ## exp(log(odds of survival)) = exp (1.0566-2.5137) x (0 if female, 1 if male)
+
+broom::tidy(m)
+confint(m)
+
+coefs <- broom::tidy (m) %>% select (estimate)
+logOR_female_survival <- coefs$estimate[1] + coefs$estimate[2] * 0
+logOR_male_survival <- coefs$estimate[1] + coefs$estimate[2] * 1
+OR_female_survival <- exp (logOR_female_survival)
+OR_male_survival <- exp (logOR_male_survival)
+```
+
+Got sleepy and stopped paying attention alas
