@@ -1,0 +1,125 @@
+---
+title: "April 10 notes"
+format: html
+editor: visual
+---
+
+## Cont from Monday
+
+```{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/titanic_train.csv"
+d <- read_csv (f, col_names = TRUE)
+
+d <- d %>%
+  select(Survived, Pclass, Name, Sex, Age, SibSp, Parch, Fare, Cabin, Embarked) %>%
+  mutate (Sex = as.factor(Sex),
+          Embarked = as.factor (Embarked),
+          Pclass = as.factor (Pclass)
+  )
+
+glimpse(d)
+```
+
+What is the relationship between survival and both sex and Pclass?
+
+```{r}
+m <- glm (Survived ~ Sex + Pclass, data=d, family = "binomial")
+
+summary(m)
+
+#log(2.2971) is the female odds of survival; male is log(2.2971)-2.6419, etc. 
+# To figure out female 2nd class: log(intercept or 2.2971)-.08380 etc
+```
+
+### Deviance rather than variance
+
+-   The measure of discrepancy used in a GLM to assess the goodness of fit of the model to the data is called the **deviance**, which is an analog of variance in a general linear model
+
+-   For GLMs, we can use a likelihood ratio test (LRT which is similar to an F ratio test) to compare the ratio of likelihoods of a model and a nested model to test if the "fuller" proposed model provides additional explanatory power of a more "reduced" model. One function that does this is lrtest() from the {lmtest} package. Or another, anova() with test="Chisq" lrtest (reduced, proposed).
+
+### Second type of GLM: log-linear or poisson regression
+
+-   count data
+
+    -   binomial counts are the numbers of successes in a number of trials
+
+    -   Poisson counts are the number of occurrences of an event in an interval of time or space.
+
+-   in Poisson-distributed variables, the mean and the variance are equal and represented by lambda.
+
+```{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/woollydata.csv"
+d <- read_csv (f, col_names = TRUE)
+
+glimpse(d)
+
+p <- ggplot(data=d, aes (x=age, y=success)) + geom_point() + xlab ("Age") + ylab ("Mating Success")
+
+p
+
+glm <- glm(data=d, success ~ age, family=poisson)
+summary(glm)
+```
+
+Is this model better than an intercept only model?
+
+```{r}
+#create null model
+null <- glm(data=d, success ~ 1, family="poisson")
+lrtest(null, glm)
+
+#or by hand
+g2<- null$deviance - glm$deviance
+p<- 1-pchisq(g2, df=1)
+```
+
+## Mixed Effects Modeling
+
+-   A final extension of linear regression modeling: "multilevel" or "mixed effects" modeling
+
+-   in a general/ized linear "mixed effects" model (GLMM), we have a response variable, Y and observations that fall into different factor categories, each with some set of levels (for example sex with levels male and female, individuals with different names).
+
+-   We can conceptualize these factor effects as being either fixed or random.
+
+    -   fixed factors are those that reflect all levels of interest in our study, while random effects are those that represet only a sample of the levels of interest
+
+#### Ramifications of random effects
+
+-   broadens the scope of inference.
+
+-   naturally incorporates dependence in the model and helps us account for pseudo-replication in our dataset. Observations that share the same level of random effects are explicitly modeled as being correlated. this makes mixed effect modeling useful for dealing with time series data, spatially correlated data, or situations with repeated measurements.
+
+```{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/chimpgrooming.csv"
+d <- read_csv (f, col_names = TRUE)
+
+glimpse(d)
+```
+
+Let's look at how reproductive condition and parity influence how much grooving a female receives.
+
+The Mixed effect model deals with this situation by adding subject ID as a random effect in our model, allowing us to address the non-independence issue by estimating a different set of parameters for each level of the factor "subject"
+
+Can do two mixed effect models, one with intercept only and one with intercept and slope
+
+```{r}
+p <- ggplot(data=d, aes (x=subject, y=duration)) + geom_boxplot()  
+q <- ggplot(data=d, aes (x=reprocondition, y=duration)) + geom_boxplot()  
+```
+
+install {lme4}
+
+```{r}
+m <- lmer(data=d, duration ~ reprocondition + parity + (1 | subject))
+summary(m)
+```
+
+#### Inference using LRTs
+
+-   in mixed effects models, it is not as straightforward as it is for standard linear models to determine p values associated with either overall models or individual coefficients. Using **likelihood ratio tests** is a commeon approach.
+
+-   ex: grooming duration\~ reproductive condition + parity + (1\|subject)
+
+-   
+
+you're too tired to take notes
