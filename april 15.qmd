@@ -1,0 +1,72 @@
+---
+title: "april 15 notes"
+format: html
+editor: visual
+---
+
+## More mixed effects modeling
+
+```{r}
+library(tidyverse)
+library (lme4)
+library (AICcmodavg)
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/chimpgrooming.csv"
+d <- read_csv (f, col_names = TRUE)
+
+glimpse(d)
+
+```
+
+\
+
+### Inference using LRTs
+
+```{r}
+#ull model with both fixed effects
+full <- lmer (data=d, duration ~ reprocondition + parity + (1 + reprocondition|subject) + (1 + parity|subject), REML= FALSE)
+
+minusRC <- lmer (data=d, duration ~ parity + (1 + reprocondition|subject) + (1 + parity|subject), REML= FALSE)
+
+minusP <- lmer (data=d, duration ~ reprocondition + (1 + reprocondition|subject) + (1 + parity|subject), REML= FALSE)
+
+#p value for reprocondition
+anova(minusRC, full, test="Chisq")
+
+#p value for parity
+anova(minusP, full, test="Chisq")
+```
+
+Reprocondition is a significant factor in this mixed effect model because p value is significant.
+
+### Inference using AIC
+
+-   as information theoretic approaches have become more popular, it's become more common to assess model fit by comparing the AIC values of different models, acknowledging the caveat that AIC can only tell us about the relative fit of alternative models, but not whether a particular model is a good fit, overall. Recall that AIC values are a way of inverting and scaling model log-likelihoods that penalizes models with greater numbers of parameters.
+
+-   the `aictab ()` function from {AICcmodavg} neatly prints out tables with AIC, delta AIC, and log-likelihood values
+
+    ```{r}
+    null <- lmer(data=d, duration ~ (1 + reprocondition | subject) + (1+parity | subject), REML= FALSE)
+
+    (aic_table <- aictab(list(full, minusRC, minusP, null), modnames= c("full","minusRC", "minusP", "null")))
+    ```
+
+    Full model is best model because it has lowest AIC. Anything that has a delta AIC below 4 is generally considered to be 'as good' or somewhat equivalent.
+
+-   Remember AIC provides an estimate for the relative fit of various models, it says nothing about the absolute fit
+
+-   AIC also does not address the amount of variance in a response variable explained by a model
+
+-   AIC is not comparable across datasets, so fit is not generalizable
+
+-   the `r.squaredGLMM()` function from {MuMIn} returns two pseudo-Rsquared measures for the model
+
+    -   R2GLMM is the amount of variance explained on the link scale of the response variable rather than the original scale. We can interpret this as a measusre of the variance explained only by the fixed effects.
+
+    -   Conditional R2GLMMc is the amount of variance explained by both fixed and random effects
+
+        ## Coding challenge
+
+        ```{r}
+        f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/Bowden-ParryOtterdata.csv"
+        d <- read_csv (f, col_names = TRUE)
+        ```

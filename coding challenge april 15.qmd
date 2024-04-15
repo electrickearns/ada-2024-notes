@@ -1,0 +1,43 @@
+---
+title: "coding challenge april 15"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library (lme4)
+
+```
+
+```{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/Bowden-ParryOtterdata.csv"
+d <- read_csv (f, col_names = TRUE)
+
+#wrangle
+## adding trial variable
+d <- d %>% mutate(trial= paste0(zoo, trialorder))
+
+##addding in an observation-level column. Use as a random effect to give each row a unique identifier
+d <- rowid_to_column(d, var="obs")
+
+## rename 
+d <- d %>% rename(Shared= TotalSharebothharasspro, BegRec = begreceived)
+
+## plot total food transferred in relation to begging received
+ggplot(d, aes(x = BegRec, y=Shared)) + 
+  geom_jitter() +
+  xlab("Begging Received (total")
+```
+
+Then he kept going without ME\
+\
+at some point did: Shared \~ BegRec + offset (log(trialduration/60))\
+
+```{r}
+m <- glmer (Shared ~ BegRec + offset(log(trialduration/60)) + (1|ID) + (1|trial) + (1|obs), data=d, family= poisson (link=log))
+
+summary (m)
+```
+
+\
